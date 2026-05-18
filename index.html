@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decart AI Studio - NDI & OBS Realtime Integration</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎭</text></svg>">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    
+    <header class="app-header animate-fade-in">
+        <div class="logo-area">
+            <div class="logo-icon"></div>
+            <h1>Decart <span>Realtime Studio</span></h1>
+        </div>
+        <div class="status-badge" id="connection-status">
+            <span class="indicator offline"></span>
+            <span class="status-text">Disconnected</span>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="controls-panel animate-slide-in-left">
+            <!-- API Credentials Section directly on the home page -->
+            <div class="panel-section glass-card">
+                <h3><span class="icon">🔑</span> API Credentials</h3>
+                <div class="input-group">
+                    <label for="api-key">Decart API Key</label>
+                    <div style="display: flex; gap: 8px; margin-top: 5px;">
+                        <input type="password" id="api-key" placeholder="Enter your Decart API Key..." autocomplete="off" style="flex: 1; margin: 0;">
+                        <button id="apply-key-btn" class="btn btn-primary" style="width: auto; padding: 12px 18px; margin: 0; font-size: 13px;">Apply</button>
+                    </div>
+                    <p class="helper-text" style="margin-top: 8px;">Stored securely in browser local storage.</p>
+                </div>
+            </div>
+
+            <!-- Identity Cloning Dropzone Section -->
+            <div class="panel-section glass-card">
+                <h3><span class="icon">👥</span> Identity Clone Reference</h3>
+                <div class="input-group">
+                    <label>Reference Picture (Face / Costume Target)</label>
+                    <div class="upload-dropzone" id="dropzone">
+                        <span class="upload-icon">📸</span>
+                        <p class="upload-text">Drag & drop image or click to select</p>
+                        <input type="file" id="file-input" accept="image/*" class="hidden">
+                    </div>
+                    <div class="upload-preview-container hidden" id="preview-container">
+                        <img id="image-preview" src="" alt="Reference Target Preview">
+                        <button id="remove-image-btn" class="remove-btn" title="Remove image">✕</button>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="clone-mode">Cloning Mode</label>
+                    <select id="clone-mode">
+                        <option value="face-swap" selected>Identity Clone (Face & Features)</option>
+                        <option value="try-on">Virtual Try-On (Clothes & Fit)</option>
+                        <option value="restyle">Creative Restyle (General Styling)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section glass-card">
+                <h3><span class="icon">⚙️</span> Session Configuration</h3>
+                <div class="input-group">
+                    <label for="model-select">Realtime Model</label>
+                    <select id="model-select">
+                        <option value="lucy-vton-latest" selected>lucy-vton-latest (Virtual Try-On)</option>
+                        <option value="lucy-restyle-2">lucy-restyle-2 (Live Style Transformation)</option>
+                        <option value="lucy-2.1">lucy-2.1 (Ultra Low Latency)</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="video-source">Input Video Source (Camera / OBS Virtual Cam)</label>
+                    <select id="video-source">
+                        <option value="">Loading camera sources...</option>
+                    </select>
+                </div>
+
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label for="resolution-select">Resolution</label>
+                        <select id="resolution-select">
+                            <option value="1280x720" selected>720p (HD)</option>
+                            <option value="1920x1080">1080p (Full HD)</option>
+                            <option value="640x360">360p (Fast)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fps-select">Frame Rate</label>
+                        <select id="fps-select">
+                            <option value="30" selected>30 FPS</option>
+                            <option value="60">60 FPS</option>
+                            <option value="15">15 FPS</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="audio-enable" checked>
+                    <label for="audio-enable">Transmit Audio Track</label>
+                </div>
+            </div>
+
+            <div class="panel-section glass-card">
+                <h3><span class="icon">🎭</span> Style & Prompts</h3>
+                <div class="presets-container">
+                    <label>Presets</label>
+                    <div class="preset-chips">
+                        <button class="preset-chip active" data-prompt="Change the person's shirt to red">Red Shirt</button>
+                        <button class="preset-chip" data-prompt="A person wearing a premium futuristic superhero costume, cinema details">Superhero</button>
+                        <button class="preset-chip" data-prompt="A stunning gorgeous highly detailed Japanese anime style painting, vibrant colors">Anime</button>
+                        <button class="preset-chip" data-prompt="Add black cool cyberpunk sunglasses and cyberpunk jacket to the person">Cyberpunk</button>
+                        <button class="preset-chip" data-prompt="A beautiful watercolor painting, elegant ink washes and soft colors">Watercolor</button>
+                        <button class="preset-chip" data-prompt="A sculpture made of polished white marble in a luxury museum museum">Marble Statue</button>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="custom-prompt">Prompt Description</label>
+                    <textarea id="custom-prompt" placeholder="Describe the AI transformation details here..." rows="4">Change the person's shirt to red</textarea>
+                    <button id="ai-enhance-btn" class="icon-btn" style="margin-top: 8px; width: 100%; justify-content: center; background: rgba(0, 242, 254, 0.05); border-color: rgba(0, 242, 254, 0.2);"><span class="btn-icon">⚡</span> Enhance Prompt with AI Vision</button>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enhance-prompt" checked>
+                    <label for="enhance-prompt">Auto-Enhance Prompt</label>
+                </div>
+
+                <button id="update-prompt-btn" class="btn btn-secondary" disabled>
+                    Update Prompt
+                </button>
+            </div>
+        </aside>
+
+        <!-- Video & Monitoring Workspace -->
+        <section class="workspace animate-fade-in-delayed">
+            <div class="video-grid">
+                <!-- Input Source -->
+                <div class="video-card glass-card">
+                    <div class="card-header">
+                        <h4>Local Video Source</h4>
+                        <span class="badge" id="local-resolution-badge">-</span>
+                    </div>
+                    <div class="video-wrapper">
+                        <video id="local-video" autoplay playsinline muted></video>
+                        <div class="video-placeholder" id="local-placeholder">
+                            <span class="pulse-ring"></span>
+                            <p>Select source and click Start Connection</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Transformed Output -->
+                <div class="video-card glass-card output-card">
+                    <div class="card-header">
+                        <h4>Decart Transformed Output</h4>
+                        <span class="badge badge-accent" id="output-resolution-badge">-</span>
+                    </div>
+                    <div class="video-wrapper">
+                        <video id="remote-video" autoplay playsinline></video>
+                        <div class="video-placeholder" id="remote-placeholder">
+                            <p>Waiting for Decart stream...</p>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button id="fullscreen-btn" class="icon-btn" title="Fullscreen Output (Perfect for OBS Capture)">
+                            <span class="btn-icon">📺</span> Fullscreen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Trigger -->
+            <div class="action-bar glass-card">
+                <button id="start-btn" class="btn btn-primary">
+                    <span class="btn-spinner hidden"></span>
+                    Start Connection
+                </button>
+                <button id="stop-btn" class="btn btn-danger hidden">
+                    Disconnect
+                </button>
+            </div>
+
+            <!-- WebRTC Live Logs Console -->
+            <div class="console-panel glass-card">
+                <div class="console-header">
+                    <h4><span class="console-dot"></span> Live Integration Console</h4>
+                    <button id="clear-console" class="text-btn">Clear Logs</button>
+                </div>
+                <div class="console-body" id="console-logs">
+                    <div class="log-line info">[System] Studio ready. Configure your settings and start streaming.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <section class="integration-guide-container animate-fade-in-delayed">
+        <div class="glass-card guide-card">
+            <h2>OBS Studio & NDI Integration Guide</h2>
+            <div class="guide-steps">
+                <div class="guide-step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h4>Configure Input (OBS Virtual Camera)</h4>
+                        <p>Turn on <strong>OBS Virtual Camera</strong> in OBS Studio. In the settings sidebar of this web app, select "OBS Virtual Camera" as the video source to process your OBS scene output.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h4>Capture Transformed Output</h4>
+                        <p>To bring the AI transformed feed back into OBS, add a <strong>Browser Source</strong> in OBS with this app's URL. Alternatively, click the <strong>Fullscreen</strong> button on the transformed card and use <strong>Window Capture</strong> in OBS.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h4>Broadcast via DistroAV NDI</h4>
+                        <p>With the <strong>DistroAV plugin</strong> installed in OBS, go to <strong>Tools > DistroAV NDI Settings</strong>, enable the Main Output, and broadcast your AI styled stream to any NDI device or receiver on your network with zero latency!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- App Logic Script -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
