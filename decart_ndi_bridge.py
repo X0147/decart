@@ -96,22 +96,32 @@ def main():
             sys.exit(1)
 
         selected_source = None
+        attempt = 0
         while selected_source is None:
             ndi.find_wait_for_sources(find, 2000)
             sources = ndi.find_get_current_sources(find)
             
             discovered_names = []
+            non_loopback_sources = []
             if sources:
                 for s in sources:
                     discovered_names.append(s.ndi_name)
                     # Exclude self-loopback Decart stream outputs to prevent feedback cascades!
                     if "decart ai transformed" in s.ndi_name.lower():
                         continue
+                    non_loopback_sources.append(s)
                     if not args.source or args.source.lower() in s.ndi_name.lower():
                         selected_source = s
                         break
             
             if selected_source is None:
+                attempt += 1
+                if attempt >= 3 and non_loopback_sources:
+                    # Smart auto-discovery fallback to first available active third-party NDI source!
+                    selected_source = non_loopback_sources[0]
+                    log(f"[NDI Capture] 💡 Specified target '{target_name}' not active after 6s. Smart-detected active alternative source: {selected_source.ndi_name}")
+                    break
+                    
                 log(f"[NDI Capture] Source '{target_name}' not active. Discovered on network: {discovered_names or 'None'}. Retrying in 2s...")
                 log(f"[Instruction] Please verify NDI Output is turned ON in OBS (Tools -> DistroAV NDI Settings -> Main Output enabled).")
                 time.sleep(2)
