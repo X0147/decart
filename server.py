@@ -50,10 +50,11 @@ class DecartAPIHandler(SimpleHTTPRequestHandler):
             try:
                 # Call official Decart API endpoint for tokens
                 req = urllib.request.Request(
-                    "https://api.decart.ai/v1/tokens",
+                    "https://api.decart.ai/v1/client/tokens",
                     method="POST",
+                    data=json.dumps({"expiresIn": 3600}).encode('utf-8'),
                     headers={
-                        "Authorization": f"Bearer {final_key}",
+                        "x-api-key": final_key,
                         "Content-Type": "application/json"
                     }
                 )
@@ -93,20 +94,34 @@ class DecartAPIHandler(SimpleHTTPRequestHandler):
                 
                 garment_uploaded = "image" in form
                 person_uploaded = "personFrame" in form
+                clone_mode = form.getvalue("cloneMode", "face-swap")
                 
-                # Mock premium vision models outputs dynamically based on standard garment types
-                prompts_presets = [
-                    "Substitute the upper garment with a premium black bomber jacket, neon blue logo on the left chest and a high-fidelity zip front",
-                    "Substitute the current top with a red leather jacket featuring sleek zipped pockets and an athletic tailored finish",
-                    "Substitute the grey crewneck sweater with a blue and pink flame print hoodie with a relaxed oversized fit",
-                    "Substitute the shirt with a vintage indigo washed denim jacket, bronze buttons and chest pockets",
-                    "Substitute the top with a vibrant green and black flannel plaid button-down shirt, natural open collar styling"
-                ]
+                # Dynamic visual descriptor generation based on selected cloneMode and trigger words
+                if clone_mode == "face-swap":
+                    prompts_presets = [
+                        "Replace the character in the video with the person in the reference image, high-fidelity face swap, cinematic details, sharp focus",
+                        "Replace the face and hair of the person with the face in the reference image, matching posture, high-detail texture, cinematic lighting",
+                        "Replace the character with the man in the reference image, photorealistic facial structure, sharp features, seamless integration"
+                    ]
+                elif clone_mode == "try-on":
+                    prompts_presets = [
+                        "Replace the shirt with a premium black bomber jacket, neon blue logo on the left chest and a high-fidelity zip front",
+                        "Replace the current top with a red leather jacket featuring sleek zipped pockets and an athletic tailored finish",
+                        "Replace the grey crewneck sweater with a blue and pink flame print hoodie with a relaxed oversized fit",
+                        "Replace the shirt with a vintage indigo washed denim jacket, bronze buttons and chest pockets",
+                        "Replace the top with a vibrant green and black flannel plaid button-down shirt, natural open collar styling"
+                    ]
+                else:
+                    prompts_presets = [
+                        "Transform to match the creative art style of the reference image, highly detailed painting style, artistic color palette",
+                        "Transform to futuristic cyberpunk aesthetic, glowing neon elements, high-tech details, atmospheric night lighting",
+                        "Transform to a beautiful watercolor painting, elegant ink washes and soft colors"
+                    ]
                 
                 import random
                 selected_prompt = random.choice(prompts_presets)
                 
-                print(f"[Vision] AI Generated Prompt: '{selected_prompt}' (Garment uploaded: {garment_uploaded}, Person Frame: {person_uploaded})")
+                print(f"[Vision] AI Generated Prompt ({clone_mode}): '{selected_prompt}' (Garment uploaded: {garment_uploaded}, Person Frame: {person_uploaded})")
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')

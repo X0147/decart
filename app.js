@@ -3,13 +3,13 @@
 // Application State
 const state = {
     apiKey: localStorage.getItem('decart_api_key') || '',
-    model: 'lucy-vton-latest',
+    model: 'lucy-2.1',
     selectedSourceId: '',
     width: 1280,
     height: 720,
     fps: 30,
     audio: true,
-    prompt: 'Substitute the character in the video with the person in the reference image.',
+    prompt: 'Replace the character in the video with the person in the reference image, high-fidelity face swap, cinematic details, sharp focus.',
     enhance: true,
     localStream: null,
     peerConnection: null,
@@ -121,16 +121,48 @@ function setupImageDropzone() {
         state.cloneMode = e.target.value;
         log('info', `[Clone] Mode updated to: ${state.cloneMode}`);
         
-        // Auto-configure prompt based on mode selection
+        // Auto-configure prompt & model based on mode selection
         if (state.cloneMode === 'face-swap') {
-            state.prompt = "Substitute the character in the video with the person in the reference image.";
+            state.prompt = "Replace the character in the video with the person in the reference image, high-fidelity face swap, cinematic details, sharp focus.";
+            state.model = 'lucy-2.1';
+            els.modelSelect.value = 'lucy-2.1';
+            log('info', '[Clone] Auto-selected character mapping model: lucy-2.1');
         } else if (state.cloneMode === 'try-on') {
             state.prompt = "Keep the person's face, but change their shirt and outfit to match the clothing inside the reference image.";
+            state.model = 'lucy-vton-latest';
+            els.modelSelect.value = 'lucy-vton-latest';
+            log('info', '[Clone] Auto-selected garment try-on model: lucy-vton-latest');
         } else {
             state.prompt = "Redesign the style and aesthetic to mirror the style elements of the reference image.";
+            state.model = 'lucy-restyle-2';
+            els.modelSelect.value = 'lucy-restyle-2';
+            log('info', '[Clone] Auto-selected style transformation model: lucy-restyle-2');
         }
         els.customPrompt.value = state.prompt;
+
+        if (state.isConnected) {
+            log('warning', '[Clone] ⚠️ Model changed while connected. Please Disconnect and click Connect again to apply the new model!');
+        }
     });
+}
+
+function activateIdentityCloneMode() {
+    // 1. Remove active state from all presets
+    els.presetChips.forEach(c => c.classList.remove('active'));
+    
+    // 2. Set cloning mode to face-swap by default
+    state.cloneMode = 'face-swap';
+    els.cloneModeSelect.value = 'face-swap';
+    
+    // 3. Set the correct flagship character model
+    state.model = 'lucy-2.1';
+    els.modelSelect.value = 'lucy-2.1';
+    
+    // 4. Set the correct trigger prompt
+    state.prompt = "Replace the character in the video with the person in the reference image, high-fidelity face swap, cinematic details, sharp focus.";
+    els.customPrompt.value = state.prompt;
+    
+    log('success', '[Clone] Face-swap mode activated! Auto-selected flagship character model: lucy-2.1.');
 }
 
 function handleUploadedFile(file) {
@@ -152,6 +184,9 @@ function handleUploadedFile(file) {
         // UI transitions
         els.dropzone.classList.add('hidden');
         els.previewContainer.classList.remove('hidden');
+        
+        // Auto configure face swap parameters
+        activateIdentityCloneMode();
         
         log('success', `[Clone] Reference target loaded successfully! Ready for OBS / NDI cloning.`);
         
@@ -513,6 +548,7 @@ async function enhancePromptWithAIVision() {
     canvas.toBlob(async (personFrameBlob) => {
         const formData = new FormData();
         formData.append("image", state.referenceImageBlob);
+        formData.append("cloneMode", state.cloneMode);
         if (personFrameBlob) {
             formData.append("personFrame", personFrameBlob);
         }
